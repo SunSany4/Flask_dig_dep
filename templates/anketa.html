@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form action="" method="post" novalidate>
+
+
+    {% for field in form if field.name != 'csrf_token' %}
+    <div>
+        {{ field.label() }}
+        <br>
+        {{ field() }}
+    </div>
+    {% endfor %}
+
+
+</form>
+
+{% endblock %}

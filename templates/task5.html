@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 align="center"> Задание 5 </h1>
+<h2 align="center"> {{ title }} </h2>
+
+
+<div align="center">
+    <table>
+        {% for _ in range(row) %}
+        <tr>
+            {% for i in range(col) %}
+            <td>
+                <a href="https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Venus_globe.jpg/300px-Venus_globe.jpg">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Venus_globe.jpg/300px-Venus_globe.jpg"
+                         alt="First slide">
+                </a>
+            </td>
+           {% endfor %}
+        </tr>
+        <tr>
+             {% for i in range(col) %}
+            <td>
+                <div align="center">
+                    <a href="https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Venus_globe.jpg/300px-Venus_globe.jpg">
+                        <button class="btn btn-success rounded-pill px-3" type="button">Просмотр</button>
+                    </a>
+                </div>
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+
+</div>
+
+
+{% endblock %}
