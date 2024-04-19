@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from random import randint
 from flask_login import LoginManager, login_user, current_user, login_required, logout_user
 
-
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'digitalDepartment'
@@ -77,12 +76,12 @@ def login():
     return render_template('login.html', title='Authorization', form=form)
 
 
-
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect('/index')
+
 
 def init_data_db():
     # db_session.global_init('db/blogs.db')
@@ -127,7 +126,8 @@ def add_news():
 
     return render_template('news.html', title='Добавление новости', form=form)
 
-@app.route('/news/<int: id>', methods=['GET', 'POST'])
+
+@app.route('/news/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_news(id):
     form = NewsForm()
@@ -147,10 +147,12 @@ def edit_news(id):
         else:
             abort(404)
     return render_template('news.html', title='Редактирование новости', form=form)
+
+
 def main():
     db_session.global_init('db/blogs.db')
-    app.run()
-    # init_data_db()
+    # app.run()
+    init_data_db()
 
 
 if __name__ == '__main__':
