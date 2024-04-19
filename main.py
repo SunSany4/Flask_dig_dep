@@ -1,13 +1,15 @@
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, url_for, abort
 from forms.loginform import LoginForm
-from forms.anketa_form import AnketaForm
+from forms.newsform import NewsForm
 from forms.registerform import RegisterForm
 from data import db_session
 from data.users import User
 from data.news import News
+
 from datetime import datetime, timedelta
 from random import randint
-from flask_login import LoginManager, login_user
+from flask_login import LoginManager, login_user, current_user, login_required, logout_user
+
 
 app = Flask(__name__)
 
@@ -36,9 +38,31 @@ def index():
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        pass
+        if form.password.data != form.password_again.data:
+            return render_template('register.html',
+                                   title='Регистрация',
+                                   form=form,
+                                   message='Пароли не совпадают')
+        db_sess = db_session.create_session()
+        if db_sess.query(User).filter(User.email == form.email.data).first():
+            return render_template('register.html',
+                                   title='Регистрация',
+                                   form=form,
+                                   message='Пользователь с таким адресом почты уже существует')
+        user = User(
+            name=form.name.data,
+            surname=form.surname.data,
+            email=form.email.data,
+        )
+        user.set_password(form.password.data)
+        db_sess.add(user)
+        db_sess.commit()
+        return redirect('/login')
+    return render_template('register.html',
+                           title='Регистрация',
+                           form=form,
+                           )
 
-    return
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -52,6 +76,13 @@ def login():
         return render_template('login.html', message='Wrong Login or password', form=form)
     return render_template('login.html', title='Authorization', form=form)
 
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect('/index')
 
 def init_data_db():
     # db_session.global_init('db/blogs.db')
@@ -79,6 +110,43 @@ def init_data_db():
     db_sess.close()
 
 
+@app.route('/news', methods=['GET', 'POST'])
+@login_required
+def add_news():
+    form = NewsForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        news = News()
+        news.title = form.title.data
+        news.content = form.content.data
+        news.is_private = form.is_private.data
+        current_user.news.append(news)
+        db_sess.merge(current_user)
+        db_sess.commit()
+        return redirect('/index')
+
+    return render_template('news.html', title='Добавление новости', form=form)
+
+@app.route('/news/<int: id>', methods=['GET', 'POST'])
+@login_required
+def edit_news(id):
+    form = NewsForm()
+    if request.method == 'GET':
+        """
+        получение новости из БД с указанным id
+        открытие формы передача в форму данных из БД
+        """
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
+        if news:
+            news.title = form.title.data
+            news.content = form.content.data
+            news.is_private = form.is_private.data
+            db_sess.commit()
+        else:
+            abort(404)
+    return render_template('news.html', title='Редактирование новости', form=form)
 def main():
     db_session.global_init('db/blogs.db')
     app.run()

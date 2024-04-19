@@ -5,6 +5,9 @@ from wtforms.validators import DataRequired
 
 
 class RegisterForm(FlaskForm):
-    """прописать форму регистрации нового пользователя
-    обязательно должно быть два поля для ввода пароля 'пароль' и 'введите пароль повторно'"""
-    pass
+    email = EmailField('Почта', validators=[DataRequired()])
+    password = PasswordField('Пароль', validators=[DataRequired()])
+    password_again = PasswordField('Повторите пароль', validators=[DataRequired()])
+    name = StringField('Имя', validators=[DataRequired()])
+    surname = StringField('Фамилия')
+    submit = SubmitField('Зарегистрироваться')
