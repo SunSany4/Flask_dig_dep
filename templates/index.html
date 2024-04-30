@@ -10,6 +10,14 @@
             <h1 class="display-4 fst-italic">{{ item.title }}</h1>
             <p class="lead my-3">{{ item.content }}</p>
             <p class="lead mb-0"><a href="#" class="text-body-emphasis fw-bold">{{ item.created_date }}</a></p>
+            {% if current_user.is_authenticated and current_user == item.user %}
+                <a href="/news/{{ item.id }}" class="btn btn-warning">
+                    Изменить
+                </a>
+                <a href="/news_delete/{{ item.id }}" class="btn btn-danger">
+                    Удалить
+                </a>
+            {% endif %}
         </div>
     </div>
     {% endfor %}

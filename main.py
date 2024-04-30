@@ -1,16 +1,19 @@
-from flask import Flask, render_template, redirect, url_for, abort
+from flask import Flask, render_template, redirect, url_for, abort, request
 from forms.loginform import LoginForm
 from forms.newsform import NewsForm
 from forms.registerform import RegisterForm
-from data import db_session
+from data import db_session, news_api
 from data.users import User
 from data.news import News
 
 from datetime import datetime, timedelta
 from random import randint
 from flask_login import LoginManager, login_user, current_user, login_required, logout_user
+from flask_restful import reqparse, abort, Api, Resource
+from data import users_resources
 
 app = Flask(__name__)
+api = Api(app)
 
 app.config['SECRET_KEY'] = 'digitalDepartment'
 
@@ -29,7 +32,7 @@ def load_user(user_id):
 def index():
     db_session.global_init('db/blogs.db')
     db_sess = db_session.create_session()
-    news = db_sess.query(News).order_by(-News.created_date)[:10]
+    news = db_sess.query(News).order_by(News.created_date.desc())[:10]
     return render_template('index.html', news=news)
 
 
@@ -132,10 +135,15 @@ def add_news():
 def edit_news(id):
     form = NewsForm()
     if request.method == 'GET':
-        """
-        получение новости из БД с указанным id
-        открытие формы передача в форму данных из БД
-        """
+        db_sess = db_session.create_session()
+        news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
+        if news:
+            form.title.data = news.title
+            form.content.data = news.content
+            form.is_private.data = news.is_private
+        else:
+            abort(404)
+
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
@@ -144,15 +152,33 @@ def edit_news(id):
             news.content = form.content.data
             news.is_private = form.is_private.data
             db_sess.commit()
+            return redirect('/')
         else:
             abort(404)
     return render_template('news.html', title='Редактирование новости', form=form)
 
+@app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def news_delete(id):
+    db_sess = db_session.create_session()
+    news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
+    if news:
+        db_sess.delete(news)
+        db_sess.commit()
+    else:
+        abort(404)
+    return redirect('/')
+
+
+
 
 def main():
     db_session.global_init('db/blogs.db')
-    # app.run()
-    init_data_db()
+    api.add_resource(users_resources.UsersResources, '/api/v2/users/<int:user_id>')
+    api.add_resource(users_resources.UsersListResource, '/api/v2/users')
+    # app.register_blueprint(news_api.blueprint)
+    app.run()
+    # init_data_db()
 
 
 if __name__ == '__main__':
