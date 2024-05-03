@@ -5,12 +5,12 @@ from forms.registerform import RegisterForm
 from data import db_session, news_api
 from data.users import User
 from data.news import News
-
+from requests import get, put, delete, post
 from datetime import datetime, timedelta
 from random import randint
 from flask_login import LoginManager, login_user, current_user, login_required, logout_user
 from flask_restful import reqparse, abort, Api, Resource
-from data import users_resources
+from data import users_resources, news_resources
 
 app = Flask(__name__)
 api = Api(app)
@@ -19,6 +19,9 @@ app.config['SECRET_KEY'] = 'digitalDepartment'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+INIT_URL = 'http://127.0.0.1:5000'
+api_v2_url = "/api/v2/"
 
 
 @login_manager.user_loader
@@ -30,9 +33,13 @@ def load_user(user_id):
 @app.route('/')
 @app.route('/index')
 def index():
-    db_session.global_init('db/blogs.db')
-    db_sess = db_session.create_session()
-    news = db_sess.query(News).order_by(News.created_date.desc())[:10]
+    # db_session.global_init('db/blogs.db')
+    # db_sess = db_session.create_session()
+    # news = db_sess.query(News).order_by(News.created_date.desc())[:10]
+    news = get(INIT_URL + api_v2_url + 'news').json()['news']
+    """
+    вывести на главной странице 10 самых свежих новостей из БД
+    """
     return render_template('index.html', news=news)
 
 
@@ -112,70 +119,71 @@ def init_data_db():
     db_sess.close()
 
 
-@app.route('/news', methods=['GET', 'POST'])
-@login_required
-def add_news():
-    form = NewsForm()
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        news = News()
-        news.title = form.title.data
-        news.content = form.content.data
-        news.is_private = form.is_private.data
-        current_user.news.append(news)
-        db_sess.merge(current_user)
-        db_sess.commit()
-        return redirect('/index')
-
-    return render_template('news.html', title='Добавление новости', form=form)
-
-
-@app.route('/news/<int:id>', methods=['GET', 'POST'])
-@login_required
-def edit_news(id):
-    form = NewsForm()
-    if request.method == 'GET':
-        db_sess = db_session.create_session()
-        news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
-        if news:
-            form.title.data = news.title
-            form.content.data = news.content
-            form.is_private.data = news.is_private
-        else:
-            abort(404)
-
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
-        if news:
-            news.title = form.title.data
-            news.content = form.content.data
-            news.is_private = form.is_private.data
-            db_sess.commit()
-            return redirect('/')
-        else:
-            abort(404)
-    return render_template('news.html', title='Редактирование новости', form=form)
-
-@app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
-@login_required
-def news_delete(id):
-    db_sess = db_session.create_session()
-    news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
-    if news:
-        db_sess.delete(news)
-        db_sess.commit()
-    else:
-        abort(404)
-    return redirect('/')
+# @app.route('/news', methods=['GET', 'POST'])
+# @login_required
+# def add_news():
+#     form = NewsForm()
+#     if form.validate_on_submit():
+#         db_sess = db_session.create_session()
+#         news = News()
+#         news.title = form.title.data
+#         news.content = form.content.data
+#         news.is_private = form.is_private.data
+#         current_user.news.append(news)
+#         db_sess.merge(current_user)
+#         db_sess.commit()
+#         return redirect('/index')
+#
+#     return render_template('news.html', title='Добавление новости', form=form)
 
 
+# @app.route('/news/<int:id>', methods=['GET', 'POST'])
+# @login_required
+# def edit_news(id):
+#     form = NewsForm()
+#     if request.method == 'GET':
+#         db_sess = db_session.create_session()
+#         news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
+#         if news:
+#             form.title.data = news.title
+#             form.content.data = news.content
+#             form.is_private.data = news.is_private
+#         else:
+#             abort(404)
+#
+#     if form.validate_on_submit():
+#         db_sess = db_session.create_session()
+#         news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
+#         if news:
+#             news.title = form.title.data
+#             news.content = form.content.data
+#             news.is_private = form.is_private.data
+#             db_sess.commit()
+#             return redirect('/')
+#         else:
+#             abort(404)
+#     return render_template('news.html', title='Редактирование новости', form=form)
+
+
+# @app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
+# @login_required
+# def news_delete(id):
+#     db_sess = db_session.create_session()
+#     news = db_sess.query(News).filter(News.id == id, News.user == current_user).first()
+#     if news:
+#         db_sess.delete(news)
+#         db_sess.commit()
+#     else:
+#         abort(404)
+#     return redirect('/')
 
 
 def main():
     db_session.global_init('db/blogs.db')
     api.add_resource(users_resources.UsersResources, '/api/v2/users/<int:user_id>')
     api.add_resource(users_resources.UsersListResource, '/api/v2/users')
+    api.add_resource(news_resources.NewsResources, '/api/v2/news/<int:news_id>')
+    api.add_resource(news_resources.NewsListResource, '/api/v2/news')
     # app.register_blueprint(news_api.blueprint)
     app.run()
     # init_data_db()
